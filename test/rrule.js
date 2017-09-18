@@ -79,13 +79,108 @@ describe('RRule', function () {
       ['FREQ=WEEKLY;UNTIL=20100101T000000Z', 'FREQ=WEEKLY;UNTIL=20100101T000000Z'],
 
       // Parse also `date` but return `date-time`
-      ['FREQ=WEEKLY;UNTIL=20100101', 'FREQ=WEEKLY;UNTIL=20100101T000000Z']
+      ['FREQ=WEEKLY;UNTIL=20100101', 'FREQ=WEEKLY;UNTIL=20100101T000000Z'],
+
+      // Parse and preserve both DTSTART and DTEND
+      [
+        'FREQ=WEEKLY;DTSTART=20100101T000000Z;DTEND=20100102T000000Z',
+        'FREQ=WEEKLY;DTSTART=20100101T000000Z;DTEND=20100102T000000Z'
+      ]
     ]
     strings.forEach(function (item) {
       var s = item[0]
       var s2 = item[1]
       assert.strictEqual(RRule.fromString(s).toString(), s2, s + ' => ' + s2)
     })
+  })
+
+  it('toString()', function () {
+    var rules = [
+      [new RRule({
+        freq: RRule.WEEKLY,
+        dtstart: new Date('2010-01-01T00:00:00Z'),
+        dtend: new Date('2010-01-02T00:00:00Z')
+      }), 'FREQ=WEEKLY;DTSTART=20100101T000000Z;DTEND=20100102T000000Z']
+    ]
+    rules.forEach(function (item) {
+      var s = item[0]
+      var s2 = item[1]
+      assert.strictEqual(s.toString(), s2, s.toString() + ' => ' + s2)
+    })
+  })
+
+  it('duration', function () {
+    var rule = new RRule({
+      freq: RRule.WEEKLY,
+      dtstart: new Date('2010-01-02T00:00:00Z'),
+      dtend: new Date('2010-01-02T08:00:00Z')
+    })
+    assert.strictEqual(rule.duration(), 8 * 60 * 60 * 1e3)
+  })
+
+  it('duration with timezone', function () {
+    var rule = new RRule({
+      freq: RRule.WEEKLY,
+      dtstart: new Date('2010-01-02T00:00:00Z'),
+      dtend: new Date('2010-01-02T00:00:00-0800')
+    })
+    assert.strictEqual(rule.duration(), 8 * 60 * 60 * 1e3)
+  })
+
+  it('includes', function () {
+    var rule = new RRule({
+      freq: RRule.DAILY,
+      dtstart: new Date('2010-01-02T00:00:00Z'),
+      dtend: new Date('2010-01-02T08:00:00Z')
+    })
+    assert.strictEqual(rule.includes(new Date('2010-01-02T01:00:00Z')), true)
+  })
+
+  it('includes recurrence', function () {
+    var rule = new RRule({
+      freq: RRule.DAILY,
+      dtstart: new Date('2010-01-02T00:00:00Z'),
+      dtend: new Date('2010-01-02T08:00:00Z')
+    })
+    assert.strictEqual(rule.includes(new Date('2010-01-03T01:00:00Z')), true)
+  })
+
+  it('does not include', function () {
+    var rule = new RRule({
+      freq: RRule.DAILY,
+      dtstart: new Date('2010-01-02T00:00:00Z'),
+      dtend: new Date('2010-01-02T08:00:00Z')
+    })
+    assert.strictEqual(rule.includes(new Date('2010-01-02T09:00:00Z')), false)
+  })
+
+  it('does not include after end', function () {
+    var rule = new RRule({
+      freq: RRule.DAILY,
+      dtstart: new Date('2010-01-02T00:00:00Z'),
+      dtend: new Date('2010-01-02T08:00:00Z'),
+      until: new Date('2010-01-03T00:00:00Z')
+    })
+    assert.strictEqual(rule.includes(new Date('2010-01-03T01:00:00Z')), false)
+  })
+
+  it('does not include after end with timezone', function () {
+    var rule = new RRule({
+      freq: RRule.DAILY,
+      dtstart: new Date('2010-01-02T00:00:00Z'),
+      dtend: new Date('2010-01-02T08:00:00Z'),
+      until: new Date('2010-01-02T16:00:00-0800')
+    })
+    assert.strictEqual(rule.includes(new Date('2010-01-03T01:00:00Z')), false)
+  })
+
+  it('does not include before start', function () {
+    var rule = new RRule({
+      freq: RRule.DAILY,
+      dtstart: new Date('2010-01-02T00:00:00Z'),
+      dtend: new Date('2010-01-02T08:00:00Z')
+    })
+    assert.strictEqual(rule.includes(new Date('2010-01-01T01:00:00Z')), false)
   })
 
   it('does not mutate the passed-in options object', function () {
